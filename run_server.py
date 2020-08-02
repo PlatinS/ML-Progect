@@ -1,12 +1,18 @@
+import dill
+import pandas as pd
+import os
+dill._dill._reverse_typemap['ClassType'] = type
+
 from flask import Flask, render_template, jsonify, request
 import logging
-import traceback
 from logging.handlers import RotatingFileHandler
 from time import time, strftime
-import os
-import dill
-
-dill._dill._reverse_typemap['ClassType'] = type
+import re
+import string
+import spacy
+import en_core_web_sm
+nlp = en_core_web_sm.load()
+from prep_def import remove_emoji, clean
 
 app = Flask(__name__)
 
@@ -32,6 +38,9 @@ def index():
 
 @app.route("/predict", methods=['POST'])
 def predict():
+	result = {"success": False}
+	dt = strftime("[%Y-%b-%d %H:%M:%S]")
+
 	json_input = request.json
 
 	current_datatime = strftime('[%Y-%b-%d %H:%M:%S]')
@@ -41,12 +50,21 @@ def predict():
 
 	tweet = json_input['tweet']
 
-	result = {
-        'ID': tweet,
-        'value_Poisson': 1,
-        'value_Gamma': 2,
-        'value_BurningCost': 'Yesss!'
-    }
+	try:
+		probs = model.predict_proba(pd.DataFrame(data = {'text': [tweet] }))
+	except AttributeError as e:
+		logger.warning(f'{dt} Exception: {str(e)}')
+		result['predictions'] = str(e)
+		result['success'] = False
+		return jsonify(result)
+
+	proba = round(probs[:, 1][0], 4)
+	if proba > 0.5:
+		result['predict'] = "Чрезвычайная ситуация"
+	else:
+		result['predict'] = "Нет чрезвычайной ситуации"
+	result['probability'] = proba
+	result['success'] = True
 
 	end_prediction = time()
 	duration = round(end_prediction - start_prediction, 6)
