@@ -1,7 +1,7 @@
 import requests
 
 data = {
-    "tweet": "Thousands gather in Berlin to protest against Covid-19 restrictions"
+    "tweet": "Coronavirus cases around the globe have surpassed 17.8 million. More than 4.6 million infections have been recorded in the United States."
     }
 
 
